@@ -49,9 +49,9 @@ nodo bakoitzak besteekin fitxategiak partekatzeko gai da.
 
 ## Euskal Encodings P2P - Zerbitzari manuala
 
-Fitxategi hau irakurri: [](ZERBITZARI_MANUALA.txt)
+Fitxategi hau irakurri: [ZERBITZARI_MANUALA.md](ZERBITZARI_MANUALA.md)
 
 ## Euskal Encodings P2P - Encoding manuala
 
-Fitxategi hau irakurri: [](ENCODING_MANUALA.txt)
+Fitxategi hau irakurri: [ENCODING_MANUALA.md](ENCODING_MANUALA.md)
 
