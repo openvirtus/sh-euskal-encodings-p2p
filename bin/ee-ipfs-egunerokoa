@@ -1,0 +1,103 @@
+#!/bin/sh -e
+##:
+#h: Usage: ee-ipfs-egunerokoa ...
+#h:
+#h: Euskal-Encodings bisitatu eta zein eduki pineatu behar diren ikusi.
+#h:
+#h:     -V      : Ikusi irakurtzen diren inguru aldagaiak.
+#h:     -l      : Deskargatu lista eta bistaratu.
+#h:     -u      : Eguneratu edukiak.
+##:
+ee_ipfs_egunerokoa() {
+    ## Parse command line arguments.
+    local OPTIND optopt
+    while getopts "Vlu" optopt; do
+        case $optopt in
+            V)  ee_ipfs_egunerokoa_show_variables; return 0;;
+            l)  ee_ipfs_egunerokoa_list;;
+            u)  ee_ipfs_egunerokoa_update ;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+}
+ee_ipfs_egunerokoa_show_variables() {
+    cat <<-EOF
+	EE_IPFS_EGUNEROKOA_LISTA : ${EE_IPFS_EGUNEROKOA_LISTA}
+	EOF
+}
+ee_ipfs_egunerokoa_calc_variables() {
+    local d="`dirname "$0" | xargs dirname`"
+    EE_IPFS_EGUNEROKOA_LISTA="${EE_IPFS_EGUNEROKOA_LISTA:-file://${d}/adibideak/adibide-lista.lst}"
+}
+## -------------------------------------------------------------------
+ee_ipfs_egunerokoa_list() {
+    curl -s "${EE_IPFS_EGUNEROKOA_LISTA}" | sed '
+    s|\#.*||
+    /^ *$/d'
+    echo ""
+}
+ee_ipfs_egunerokoa_update() {
+    ee_ipfs_egunerokoa_list | while read -r cmd hash filename; do
+        case "${cmd}" in
+            PIN)   ee_ipfs_egunerokoa_pin   "${hash}" "${filename}" ;;
+            UNPIN) ee_ipfs_egunerokoa_unpin "${hash}" "${filename}" ;;
+            *)     true                                             ;;
+        esac
+    done
+    echo "Repositorioa garbitzen ..."
+    ipfs repo gc >/dev/null 2>&1 || true
+}
+ee_ipfs_egunerokoa_pin() {
+    local hash="$1" filename="$2"
+    if test ! -n "${hash}" || test ! -n "${filename}"; then
+        return 0
+    fi
+    printf '%s %s\n' "${hash}" "${filename}"
+    hash_old="`{ ipfs files stat /ee/"${filename}" 2>/dev/null | head -n 1; } || true`"
+    if test @"${hash}" = @"${hash_old:-none}"; then
+        return 0
+    fi
+    if test -n "${hash_old}"; then
+        ipfs files rm "/ee/${filename}" >/dev/null
+        ipfs pin rm "/ipfs/${hash_old}" >/dev/null
+    fi
+    ipfs files mkdir -p /ee/"`dirname "${filename}"`"
+    if ! ipfs files cp "/ipfs/${hash}" "/ee/${filename}" >/dev/null; then
+        printf '%s ERROREA\n' "${hash}"
+        continue
+    fi
+    if ! ipfs pin add "/ipfs/${hash}" >/dev/null; then
+        printf '%s ERROREA\n' "${hash}"
+        continue
+    fi
+}
+ee_ipfs_egunerokoa_unpin() {
+    local hash="$1" filename=''
+    if test ! -n "${hash}"; then
+        return 0
+    fi
+    printf '%s UNPIN\n' "${hash}"
+    ipfs pin rm "/ipfs/${hash}" >/dev/null 2>&1 || true
+    shift
+    for filename in "$@"; do
+        ipfs files rm "/ee/${filename}" >/dev/null 2>&1 || true
+    done
+}
+
+
+
+## -------------------------------------------------------------------
+ee_ipfs_egunerokoa_calc_variables
+if test @"`basename "$0"`" = @"ee-ipfs-egunerokoa";then
+    case "${1}" in
+        ''|-h|--help)
+            sed -n 's/^ *#h: \{0,1\}//p' "$0"
+            echo ""
+            sed -n 's/^ *#l: \{0,2\}//p' "$0"
+            ;;
+        *)
+            ee_ipfs_egunerokoa "$@"
+            ;;
+    esac
+fi

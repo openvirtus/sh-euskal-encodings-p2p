@@ -1,0 +1,35 @@
+#!/bin/sh -e
+##:
+#h: Erabilera: ee-birkodifikatu FITXATEGIAK...
+#h:
+#h: Aldatu fitxategien "kontenedorea" "webm" formatura. Modu horretan
+#h: IPFS bitartez streameatu daitezke.
+##:
+ee_birkodifikatu() {
+    local opts1="-y -hide_banner -loglevel error"
+    local opts2="-c:v libvpx-vp9 -crf 30 -b:v 0 -b:a 128k -c:a libopus"
+    while test -n "$1"; do
+        case "$1" in
+            *.webm)
+                echo "${1}"
+                continue;;
+        esac
+        local fr="$1" to="`echo "$1" | sed 's|\.[^\.]*$||'`"
+        if test ! -e "${to}.webm"; then
+            echo "${to}.webm (Kodifikatzen)" >&2
+            ffmpeg ${opts1} -i "${fr}" ${opts2} "${to}.tmp.webm"
+            mv "${to}.tmp.webm" "${to}.webm"
+            echo "${to}.webm"
+        else
+            echo "${to}.webm"
+        fi
+        shift
+    done
+}
+if test @"`basename "$0"`" = @"ee-birkodifikatu";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p;s/^ *#l: \{0,2\}//p' "$0";;
+        *)            ee_birkodifikatu "$@";;
+    esac
+    exit 0
+fi

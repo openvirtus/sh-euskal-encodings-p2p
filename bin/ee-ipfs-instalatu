@@ -1,0 +1,131 @@
+#!/bin/sh -e
+##:
+#h: Erabilera: ee-ipfs-instalatu [-Vcd]
+#h:
+#h: Programa honek IPFS instalatzen eta konfiguratzen laguntzen du.
+#h:
+##:
+ee_ipfs_instalatu() {
+    case "${1}" in
+        ## --------------------------------------
+        -*V*) ee_ipfs_instalatu_show_variables ;;
+        -*c*) ee_ipfs_instalatu_cli            ;;
+        -*d*) ee_ipfs_instalatu_desktop        ;;
+        ## --------------------------------------
+        *) ee_ipfs_instalatu_cli
+           ee_ipfs_instalatu_desktop
+           ;;
+    esac
+}
+ee_ipfs_instalatu_show_variables() {
+    cat <<-EOF
+	EE_LINKDIR          : ${EE_LINKDIR}
+	EE_IPFS_DSK_VERSION : ${EE_IPFS_DSK_VERSION}
+	EE_IPFS_DSK_PREFIX  : ${EE_IPFS_DSK_PREFIX}
+	EE_IPFS_CLI_VERSION : ${EE_IPFS_CLI_VERSION}
+	EE_IPFS_CLI_PREFIX  : ${EE_IPFS_CLI_PREFIX}
+	EOF
+}
+ee_ipfs_instalatu_calc_variables() {
+    local d="${USERPROFILE:-${HOME}}"
+    EE_LINKDIR="${d}/.bin"
+    EE_IPFS_DSK_VERSION="${EE_IPFS_DSK_VERSION:-0.26.0}"
+    EE_IPFS_CLI_VERSION="${EE_IPFS_CLI_VERSION:-0.18.1}"
+    case "`uname -o`" in
+        MS/Windows) EE_IPFS_DSK_PREFIX="${USERPROFILE}"'\AppData\Local\Programs\IPFS Desktop'
+                    EE_IPFS_CLI_PREFIX="${d}/.ipfs-cli/${EE_IPFS_CLI_VERSION}"
+                    alias chmod=":";;
+        *)          EE_IPFS_DSK_PREFIX="${d}/.ipfs-desktop/${EE_IPFS_DSK_VERSION}"
+                    EE_IPFS_CLI_PREFIX="${d}/.ipfs-cli/${EE_IPFS_CLI_VERSION}";;
+    esac
+}
+## -------------------------------------------------------------------
+ee_ipfs_instalatu_cli() {
+    local url='' file=''
+    case "`uname -mo`" in
+        'x86_64 MS/Windows') file="kubo_v${EE_IPFS_CLI_VERSION}_windows-amd64.zip"  prog="ipfs.exe" ;;
+        'x86_64 GNU/Linux')  file="kubo_v${EE_IPFS_CLI_VERSION}_linux-amd64.tar.gz" prog="ipfs"     ;;
+        *)                   echo >&2 "Errorea: Plataforma ez soportatua."; return 1;;
+    esac
+    if test ! -e "${EE_IPFS_CLI_PREFIX}/${prog}"; then
+        echo "IPFS CLI deskargatzen ..."
+        url="https://dist.ipfs.tech/kubo/v${EE_IPFS_CLI_VERSION}/${file}"
+        tmp="${TEMP:-/tmp}/${file}"
+        if test ! -e "${tmp}"; then
+            wget -q -O "${tmp}.tmp" "${url}"
+            mv "${tmp}.tmp" "${tmp}"
+        fi
+        echo "IPFS CLI instalatzen ..."
+        case "${tmp}" in
+            *.tar.*)
+                mkdir -p "${EE_IPFS_CLI_PREFIX}"
+                tar xf "${tmp}" --strip-components=1 -C "${EE_IPFS_CLI_PREFIX}" --no-same-owner
+                ;;
+            *.zip)
+                rm -rf "${EE_IPFS_CLI_PREFIX}"
+                mkdir -p "${EE_IPFS_CLI_PREFIX}.tmp"
+                unzip "${tmp}" -d "${EE_IPFS_CLI_PREFIX}.tmp" -o -q
+                mv "${EE_IPFS_CLI_PREFIX}.tmp/kubo" "${EE_IPFS_CLI_PREFIX}"
+                rmdir "${EE_IPFS_CLI_PREFIX}.tmp"
+                ;;
+        esac
+    else
+        echo "IPFS CLI instalaturik dago."
+    fi
+    mkdir -p "${EE_LINKDIR}"
+    echo "IPFS CLI lotura berria: ipfs"
+    cat > "${EE_LINKDIR}/ipfs" <<-EOF
+	#!/bin/sh -e
+	exec "${EE_IPFS_CLI_PREFIX}/${prog}" "\$@"
+	EOF
+    chmod +x "${EE_LINKDIR}/ipfs"
+}
+ee_ipfs_instalatu_desktop() {
+    local url='' file=''
+    case "`uname -mo`" in
+        'x86_64 GNU/Linux')  file="ipfs-desktop-${EE_IPFS_DSK_VERSION}-linux-x64.tar.xz" prog="ipfs-desktop";;
+        'x86_64 MS/Windows') file="IPFS-Desktop-Setup-${EE_IPFS_DSK_VERSION}.exe"        prog="IPFS Desktop.exe";;
+        *)                   echo >&2 "Errorea: Plataforma ez soportatua."; return 1;;
+    esac
+    if test ! -e "${EE_IPFS_DSK_PREFIX}/${prog}"; then
+        echo "IPFS DSK deskargatzen ..."
+        url="https://github.com/ipfs/ipfs-desktop/releases/download/v${EE_IPFS_DSK_VERSION}/${file}"
+        tmp="${TEMP:-/tmp}/${file}"
+        if test ! -e "${tmp}"; then
+            wget -q -O "${tmp}.tmp" "${url}"
+            mv "${tmp}.tmp" "${tmp}"
+        fi
+        echo "IPFS DSK instalatzen ..."
+        case "${tmp}" in
+            *.tar.*)
+                mkdir -p "${EE_IPFS_DSK_PREFIX}"
+                tar xf "${tmp}" --strip-components=1 -C "${EE_IPFS_DSK_PREFIX}" --no-same-owner
+                ;;
+            *.exe)
+                "${tmp}"
+                ;;
+        esac
+        echo "IPFS DSK instalatu da."
+    else
+        echo "IPFS DSK instalaturik dago."
+    fi
+    mkdir -p "${EE_LINKDIR}"
+    echo "IPFS DSK lotura berria: ipfs-desktop"
+    cat > "${EE_LINKDIR}/ipfs-desktop" <<-EOF
+	#!/bin/sh -e
+	exec "${EE_IPFS_DSK_PREFIX}/${prog}" "\$@"
+	EOF
+    chmod +x "${EE_LINKDIR}/ipfs-desktop"
+    echo "***********************************************************************"
+    echo "* IPFS ordenagailuaren abioan piztu dadin ataza barrako               *"
+    echo "* ikonoan klikatu, 'Ezarpenak/Settings' 'Autoabiatu/Launch at login'. *"
+    echo "***********************************************************************"
+}
+## -------------------------------------------------------------------
+ee_ipfs_instalatu_calc_variables
+if test @"`basename "$0"`" = @"ee-ipfs-instalatu";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)         ee_ipfs_instalatu "$@"           ;;
+    esac
+fi

@@ -1,0 +1,23 @@
+#!/bin/sh -e
+#h: EGITEKO
+ee_mega_deskargatu() {
+    echo "EGITEKO"
+    : "http://www.euskal-encodings.eus/aurkibidea/filmak"
+    : "PRO behar du: https://mega.io/pricing"
+    : "https://mega.nz/linux/repo/Arch_Extra/x86_64/megacmd-x86_64.pkg.tar.zst"
+    : "https://docs.ipfs.tech/install/ipfs-companion/"
+    : "https://www.unixsysadmin.com/systemd-user-services/"
+}
+SCRNAME=""
+if test @"`basename "$0"`" = @"ee-mega-deskargatu";then
+    case "${1}" in
+        ''|-h|--help)
+            sed -n 's/^ *#h: \{0,1\}//p' "$0" | sed "s|\\\$0|${SCRNAME}|g"
+            echo ""
+            sed -n 's/^ *#l: \{0,2\}//p' "$0"
+            ;;
+        *)
+            ee_mega_deskargatu "$@"
+            ;;
+    esac
+fi

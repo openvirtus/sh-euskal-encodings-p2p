@@ -1,0 +1,68 @@
+#!/bin/sh -e
+##:
+#h: Erabilera: ee-ffmpeg-instalatu [-V]
+#h:
+#h: Programa honek FFMPEG instalatzen du zure ordenagailuan.
+##:
+ee_ffmpeg_instalatu() {
+    local url='' file='' x='' n=''
+    case "`uname -mo`" in
+        'x86_64 GNU/Linux')  file="ffmpeg-N-109979-g81bc7bc52e-linux64-gpl-shared.tar.xz" prog="bin/ffmpeg";;
+        'x86_64 MS/Windows') file="ffmpeg-N-109989-g7a8560cb22-win64-lgpl-shared.zip"     prog="bin/ffmpeg.exe";;
+        *)                   echo >&2 "Errorea: Plataforma ez soportatua."; return 1;;
+    esac
+    if test ! -e "${EE_FFMPEG_PREFIX}/${prog}"; then
+        echo "FFMPEG deskargatzen ..."
+        url="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2023-03-10-12-48/${file}"
+        tmp="${TEMP:-/tmp}/${file}"
+        if test ! -e "${tmp}"; then
+            wget -q -O "${tmp}.tmp" "${url}"
+            mv -v "${tmp}.tmp" "${tmp}"
+        fi
+        echo "FFMPEG instalatzen ..."
+        mkdir -p "${EE_FFMPEG_PREFIX}"
+        case "${tmp}" in
+            *.tar*) tar xf "${tmp}" --strip-components=1 -C "${EE_FFMPEG_PREFIX}" --no-same-owner;;
+            *.zip)  unzip -q -o "${tmp}" -d "${EE_FFMPEG_PREFIX}"
+                    mv "${EE_FFMPEG_PREFIX}"/ffmpeg-N-109989-g7a8560cb22-win64-lgpl-shared/* "${EE_FFMPEG_PREFIX}"
+                    rmdir "${EE_FFMPEG_PREFIX}"/ffmpeg-N-109989-g7a8560cb22-win64-lgpl-shared
+                    ;;
+        esac
+        echo "FFMPEG instalatu da."
+    else
+        echo "FFMPEG instalaturik dago."
+    fi
+    mkdir -p "${EE_LINKDIR}"
+    for x in `find "${EE_FFMPEG_PREFIX}/bin" -type f -executable`; do
+        n="`basename "$x" .exe`"
+        echo "FFMPEG lotura berria: $n"
+        cat > "${EE_LINKDIR}/${n}" <<-EOF
+	#!/bin/sh -e
+	export LD_LIBRARY_PATH="`dirname "$x" | xargs dirname`/lib"
+	exec "$x" "\$@"
+	EOF
+        case "`uname -o`" in
+            GNU/Linux) chmod +x "${EE_LINKDIR}/${n}";;
+        esac
+    done
+}
+ee_ffmpeg_instalatu_show_variables() {
+    cat <<-EOF
+	EE_LINKDIR       : ${EE_LINKDIR}
+	EE_FFMPEG_PREFIX : ${EE_FFMPEG_PREFIX}
+	EOF
+}
+ee_ffmpeg_instalatu_calc_variables() {
+    local d="${USERPROFILE:-${HOME}}"
+    EE_LINKDIR="${d}/.bin"
+    EE_FFMPEG_PREFIX="${d}/.ffmpeg"
+}
+## -------------------------------------------------------------------
+ee_ffmpeg_instalatu_calc_variables
+if test @"`basename "$0"`" = @"ee-ffmpeg-instalatu";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        -*V*)      ee_ffmpeg_instalatu_show_variables;;
+        *)         ee_ffmpeg_instalatu "$@";;
+    esac
+fi
