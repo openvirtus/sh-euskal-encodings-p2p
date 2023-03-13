@@ -40,7 +40,7 @@ IPFS autatu dugu bi arrazoi nagusirengatik:
 
 1.- *Errazagoa da*: Fitxategi bat elkarbanatzeko pausuak askoz errezagoak
 dira BitTorrent-enak baino. Nabigatzaile bitartez egin daiteke
-plugin baten bitartez. Irakurri [manuala](./IPFS_MANUALA.md).
+plugin baten bitartez.
 
 2.- *Deszentralizatuagoa da*: BitTorrent-ek erabilera zentralizatua dauka
 (tracker zentralizatua behar du). IPFS-ek, aldiz, deszentralizazio
